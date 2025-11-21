@@ -1,6 +1,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import re
+import time  # ✅ 用来模拟大模型耗时
 
 class RequestHandler(BaseHTTPRequestHandler):
     # 解析JSON请求体
@@ -15,6 +16,8 @@ class RequestHandler(BaseHTTPRequestHandler):
     def _send_json_response(self, data, status_code=200):
         self.send_response(status_code)
         self.send_header('Content-type', 'application/json')
+        # 如果前端是在 localhost 上用 fetch，可以顺便加一行 CORS（可选）
+        # self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
 
@@ -23,7 +26,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         # 仅处理指定路径
         if self.path != '/api/user/ask':
             self._send_json_response(
-                {'error': '路径不存在'}, 
+                {'error': '路径不存在'},
                 status_code=404
             )
             return
@@ -32,7 +35,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         content_type = self.headers.get('Content-Type', '')
         if not re.search(r'application/json', content_type):
             self._send_json_response(
-                {'error': '请使用application/json格式'}, 
+                {'error': '请使用application/json格式'},
                 status_code=415
             )
             return
@@ -42,7 +45,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
         except (KeyError, ValueError):
             self._send_json_response(
-                {'error': '缺少Content-Length头'}, 
+                {'error': '缺少Content-Length头'},
                 status_code=400
             )
             return
@@ -50,41 +53,64 @@ class RequestHandler(BaseHTTPRequestHandler):
         request_data = self._parse_json_body(content_length)
         if not request_data or 'question' not in request_data:
             self._send_json_response(
-                {'error': '请求体缺少question字段'}, 
+                {'error': '请求体缺少question字段'},
                 status_code=400
             )
             return
-        mock_response = "得了高血压平时需要注意以下几点：1. 饮食方面，控制食盐摄入量，每天不超过 6 克，避免吃太油腻的食物，多吃新鲜绿色蔬菜水果和有机食物，还可以适量用党参泡水喝，因为党参有降血脂、降血压等作用；2. 适度增强体育锻炼，提高身体素质；3. 保持情绪平和，避免激动，减轻精神压力，不要过度紧张；4. 若通过生活方式调整后血压控制效果不佳，应在医生指导下配合降压药物治疗。" 
-        mock_cases = [
-                {
-                    "id": 1,
-                    "question": "我有高血压这两天女婿来的时候给我拿了些党参泡水喝，您好高血压可以吃党参吗?",
-                    "answer": "高血压病人可以口服党参的。党参有降血脂，降血压的作用，可以彻底消除血液中的垃圾，从而对冠心病以及心血管疾病的患者都有一定的稳定预防工作作用，因此平时口服党参能远离三高的危害。另外党参除了益气养血，降低中枢神经作用，调整消化系统功能，健脾补肺的功能。感谢您的进行咨询，期望我的解释对你有所帮助。"
-                },
-                {
-                    "id": 2,
-                    "question": "我是一位中学教师，平时身体健康，最近学校组织健康检查，结果发觉我是高血压，去年还没有这种情况，我很担心，这边我主要想进行咨询一下高血压应当怎样治疗？麻烦医生指导一下，谢谢。",
-                    "answer": "高血压患者首先要注意控制食盐摄入量，每天不超过六克，注意不要吃太油腻的食物，多吃新鲜的绿色蔬菜水果，多吃有机食物，注意增强体育锻炼，增加身体素质，同时压力不要过大，精神不要紧张，效果不佳的话，可以积极配合以降压药物控制血压治疗，情绪平时保持平和，不易激动。"
-                }
-            ]
 
-        # 返回响应
+        question = request_data.get("question", "")
+        print(f"收到问题：{question}")
+
+        # ✅ 模拟大模型思考耗时：停顿 5 秒
+        time.sleep(5)
+
+        # mock 主回答
+        mock_response = (
+            "得了高血压平时需要注意以下几点："
+            "1. 饮食方面，控制食盐摄入量，每天不超过 6 克，避免吃太油腻的食物，"
+            "多吃新鲜绿色蔬菜水果和有机食物，还可以适量用党参泡水喝，因为党参有降血脂、降血压等作用；"
+            "2. 适度增强体育锻炼，提高身体素质；"
+            "3. 保持情绪平和，避免激动，减轻精神压力，不要过度紧张；"
+            "4. 若通过生活方式调整后血压控制效果不佳，应在医生指导下配合降压药物治疗。"
+        )
+
+        # mock 参考案例
+        mock_cases = [
+            {
+                "id": 1,
+                "question": "我有高血压这两天女婿来的时候给我拿了些党参泡水喝，您好高血压可以吃党参吗?",
+                "answer": (
+                    "高血压病人可以口服党参的。党参有降血脂、降血压的作用，可以帮助改善心血管状况，"
+                    "但仍需注意血压监测，遵医嘱服药。"
+                ),
+            },
+            {
+                "id": 2,
+                "question": "我是一个中学教师，最近体检发现高血压，该怎么治疗、需要注意什么？",
+                "answer": (
+                    "高血压患者首先要注意控制食盐摄入量，每天不超过 6 克，注意避免油腻饮食，多吃蔬菜水果；"
+                    "同时保持规律作息与适量运动，必要时在医生指导下使用降压药物。"
+                ),
+            },
+        ]
+
+        # 返回响应：response + cases
         self._send_json_response({
-            'response': mock_response,
-            'cases': mock_cases
+            "response": mock_response,
+            "cases": mock_cases,
         })
 
     # 处理其他请求方法
     def do_GET(self):
         self._send_json_response(
-            {'message': '请使用POST方法访问/api/user/ask接口'}, 
+            {'message': '请使用POST方法访问 /api/user/ask 接口'},
             status_code=405
         )
 
 def run_server(host='0.0.0.0', port=886):
     server_address = (host, port)
     httpd = HTTPServer(server_address, RequestHandler)
-    print(f"服务器启动，监听 {host}:{port}...")
+    print(f"服务器启动，监听 {host}:{port} ...")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
