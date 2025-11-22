@@ -1,5 +1,13 @@
 # Document Link
 https://rp7bg9wtwt.feishu.cn/wiki/Vaj9wFrpIikJwgkoZ3ZcHaemnvh
+
+# Data preprocessing
+tag the original csv data with related_disease_1, related_disease_2
+```
+cd data_processing
+python disease_name_preprocess.py
+python data_preprocessing.py
+```
 # Backend Usage
 start server:
 ```

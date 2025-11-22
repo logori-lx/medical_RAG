@@ -2,3 +2,6 @@
 __pycache__
 data_processing/DATA/
 *.ipynb
+data_processing/original_data/*.csv
+data_processing/processed_data/*.csv
+data_processing/DATA

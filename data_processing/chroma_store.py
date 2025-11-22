@@ -9,10 +9,10 @@ import json  # 用于格式化输出JSON
 from zai import ZhipuAiClient
 from typing import List
 
-ZHIPU_API_KEY = os.getenv("MEDICAL_RAG")
+ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY")
 COLLECTION_NAME = "medical_db"
 CHROMA_STORAGE_PATH = "DATA/chroma_db"
-INPUT_PATH='DATA'
+INPUT_PATH='processed_data'
 
 class ZhipuEmbeddingFunction:
     """智谱Embedding3嵌入函数"""
@@ -32,7 +32,7 @@ class ZhipuEmbeddingFunction:
         return [data_point.embedding for data_point in response.data]
 
 class ChromaStore:
-    def __init__(self, collection_name=COLLECTION_NAME, storage_path=CHROMA_STORAGE_PATH,input_path='data_processing\DATA'):
+    def __init__(self, collection_name=COLLECTION_NAME, storage_path=CHROMA_STORAGE_PATH,input_path='data_processing/DATA'):
         self.client = chromadb.PersistentClient(path=storage_path)
         self.embedding_function = ZhipuEmbeddingFunction()
         self.input_path = input_path
@@ -48,7 +48,7 @@ class ChromaStore:
         df = df.dropna()
         return df
 
-    def store_data(self, batch_size=128):
+    def store_data(self, batch_size=64):
         """分批存储数据到Chroma"""
         count = 0
         list_dir = os.listdir(self.input_path) 
