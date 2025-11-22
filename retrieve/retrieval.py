@@ -1,6 +1,7 @@
 import os
 import chromadb
 from typing import List, Dict
+from pyparsing import Enum
 from zai import ZhipuAiClient  # 确保 zai.py 在PYTHONPATH中
 import pandas as pd
 import query_processor
@@ -19,6 +20,12 @@ API_KEY = os.getenv("MEDICAL_RAG")
 COLLECTION_NAME = "medical_db"
 KEYWORDS_FILE = "data_processing/DATA/related_disease/related_disease.csv"
 DB_PATH = "data_processing/DATA/chroma_db"
+
+
+class RetrievalMethod(Enum):
+    VECTOR = "vector"
+    HYBRID = "hybrid"
+    BM25 = "bm25"
 class ZhipuEmbeddingFunction:
     """智谱Embedding3嵌入函数"""
     """（添加name属性）"""
@@ -194,6 +201,30 @@ class Retrieval:
         # 执行检索
         results_bm25 = retriever.retrieve(query)
         return results_bm25
+
+    def retrieve(self, retrieval_type: str, query: str, **kwargs) -> List[Dict]:
+        """统一检索接口（调度器）
+        Args:
+            retrieval_type: 检索类型，可选值：vector/keywords/hybrid/bm25
+            query: 用户查询文本
+            **kwargs: 其他参数（如top_k，仅vector/hybrid支持）
+        Returns:
+            检索结果（格式因类型略有差异，见具体方法）
+        """
+        # 提取通用参数（top_k默认值根据检索类型调整）
+        top_k = kwargs.get("top_k", 5)
+        
+        # 匹配检索类型，调用对应方法
+        if retrieval_type == RetrievalMethod.VECTOR.value:
+            return self.vector_retrieve(query, top_k=top_k)
+        elif retrieval_type == RetrievalMethod.HYBRID.value:
+            return self.hybrid_retrieve(query, top_k=top_k)
+        elif retrieval_type == RetrievalMethod.BM25.value:
+            # BM25的top_k单独控制（默认3）
+            bm25_top_k = kwargs.get("bm25_top_k", 3)
+            return self.bm25_retrieve(query, top_k=bm25_top_k)
+        else:
+            raise ValueError(f"不支持的检索类型：{retrieval_type}，可选值：vector/keywords/hybrid/bm25")
     
 if __name__ == "__main__":
     query = "糖尿病的症状有哪些？"
