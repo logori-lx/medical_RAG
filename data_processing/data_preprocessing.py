@@ -47,7 +47,7 @@ class DataPreprocessor:
             # 取前N个，不足则用空字符串填充
             row_top = sorted_names[:MAX_RELATED_DISEASES_COUNT]
             if len(row_top) < MAX_RELATED_DISEASES_COUNT:
-                row_top += [""] * (MAX_RELATED_DISEASES_COUNT - len(row_top))
+                row_top += ["无"] * (MAX_RELATED_DISEASES_COUNT - len(row_top))
             
             # 保存有效行数据和对应的疾病
             valid_rows.append(row)
