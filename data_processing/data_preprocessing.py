@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from jieba_extract_disease import DiseaseExtractor  # 导入自定义的疾病提取器
 
 MAX_RELATED_DISEASES_COUNT = 2
@@ -79,6 +80,7 @@ class DataPreprocessor:
                 )
 
 if __name__ == "__main__":
-    DISEASE_DICT = "disease_names_processed.csv"  # 疾病词典CSV路径
+    root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    DISEASE_DICT = os.path.join(root_path, "related_disease","disease_names_processed.csv") 
     preprocessor = DataPreprocessor(disease_dict_csv=DISEASE_DICT)
     preprocessor.preprocess_dir("original_data", "processed_data")

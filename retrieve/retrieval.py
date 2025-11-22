@@ -18,8 +18,9 @@ root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(root_path)
 API_KEY = os.getenv("MEDICAL_RAG")
 COLLECTION_NAME = "medical_db"
-KEYWORDS_FILE = "data_processing/DATA/related_disease/related_disease.csv"
-DB_PATH = "data_processing/DATA/chroma_db"
+# 解决路径问题
+KEYWORDS_FILE = os.path.join(root_path,"data_processing","DATA","related_disease","disease_names_processed.csv")
+DB_PATH = os.path.join(root_path,"data_processing","DATA","chroma_db")
 
 
 class RetrievalMethod(Enum):
@@ -84,7 +85,7 @@ class Retrieval:
         )
         return results
     
-    def keywords_search(self, query: str, top_k: int = 1) -> List[Dict]:
+    def keywords_search(self, keyword_in_query: str, top_k: int = 1) -> List[Dict]:
         """
         使用关键词检索模型（BM25）进行检索。
         
@@ -94,12 +95,11 @@ class Retrieval:
         """
         
         # 让keywords与self.keywords进行相似度比较，取相似度最高的top_k个
-        self.keywords["similarity"] = self.keywords["related_disease"].apply(lambda x: self.jaccard_similarity(x, query))
+        self.keywords["similarity"] = self.keywords["disease_name"].apply(lambda x: self.jaccard_similarity(x, keyword_in_query))
         results = self.keywords.sort_values(by="similarity", ascending=False).head(top_k)
-        results = results.loc[0,"related_disease"]
-        return results
+        return results.iloc[:top_k]["disease_name"].tolist()
     
-    def keywords_retrieve(self, query: str) -> List[Dict]:
+    def keywords_retrieve(self, query: str, top_k:int = 1) -> List[Dict]:
         """
         使用关键词检索模型（BM25）进行检索。
         
@@ -107,37 +107,20 @@ class Retrieval:
         :param top_k: 返回的Top-K结果数量
         :return: 包含文档ID、距离和元数据的列表
         """
-        keywords = query_processor.query_processor(query)["keywords"]
-        if len(keywords) == 0 or keywords[0] == '无':
+        keywords_in_query = query_processor.query_processor(query)["keywords"]
+        if len(keywords_in_query) == 0 or keywords_in_query[0] == '无':
             return False
-        if len(keywords) ==1:
-            keyword = keywords[0]
-            keyword = self.keywords_search(keyword, top_k=1)
-            results = self.collection.get(
-                where={
-                    "$or":[
-                        {"related_disease_1": keyword},
-                        {"related_disease_2": keyword},
-                    ]
-                    },
-  
-            )
-        elif len(keywords) == 2:
-                keyword1 = keywords[0]
-                keyword2 = keywords[1]
-                keyword1 = self.keywords_search(keyword1, top_k=1)
-                keyword2 = self.keywords_search(keyword2, top_k=1)
-                results = self.collection.get(
-                where={
-                    "$or":[
-                        {"related_disease_1": keyword1},
-                        {"related_disease_1": keyword2},
-                        {"related_disease_2": keyword1},
-                        {"related_disease_2": keyword2},
-                    ]
-                    },
-               
-            )
+        or_expression_list = []
+        for keyword_in_query in keywords_in_query:
+            keywords_in_dict = self.keywords_search(keyword_in_query, top_k)
+            for keyword in keywords_in_dict:
+                or_expression_list.append({"related_disease_1": keyword})
+                or_expression_list.append({"related_disease_2": keyword})
+        results = self.collection.get(
+            where={
+                "$or":or_expression_list
+            }
+        )
         return results
     
     def hybrid_retrieve(self, query: str, top_k: int = 5) -> List[Dict]:
