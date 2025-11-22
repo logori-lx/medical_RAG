@@ -72,7 +72,7 @@ class ChromaStore:
         # 只删除关键列（title/department/answer）为空的行，其他列空值保留
         df = df.dropna(subset=["title", "department", "answer"])
         
-        print(f"{file_path} 过滤后数据行数：{len(df)}")
+        print(f"{file_path}过滤后数据行数：{len(df)}")
         return df
 
     def store_data(self, batch_size=64):
@@ -81,12 +81,14 @@ class ChromaStore:
         list_dir = os.listdir(self.input_path)
         for file_name in list_dir:
             if file_name.endswith(".csv"):
+                
                 file_path = os.path.join(self.input_path, file_name)
                 df = self.load_data(file_path)
                 count += 1
                 print(f"文件{file_name}__/{len(list_dir)}加载完成，共{len(df)}条数据")
 
                 total_rows = len(df)
+                file_name_prefix, _ = os.path.splitext(file_name)
                 for start_idx in tqdm(
                     range(0, total_rows, batch_size), desc="存储进度"
                 ):
@@ -107,7 +109,7 @@ class ChromaStore:
                     self.collection.add(
                         documents=batch["title"].tolist(),
                         metadatas=[metadatas[i] for i in range(len(metadatas))],
-                        ids=[f"id_{i}" for i in range(start_idx, end_idx)],
+                        ids=[f"{file_name_prefix}_{i}" for i in range(start_idx, end_idx)],
                     )
                 print(self.collection.get(where={"department": "心血管科"}))
 
