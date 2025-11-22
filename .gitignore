@@ -5,3 +5,5 @@ data_processing/DATA/
 data_processing/original_data/*.csv
 data_processing/processed_data/*.csv
 data_processing/DATA
+data_processing/API_KEY.txt
+.venv/
