@@ -26,7 +26,7 @@ sys.path.append(root_path)
 API_KEY = os.getenv("MEDICAL_RAG")
 COLLECTION_NAME = "medical_db"
 # 解决路径问题
-KEYWORDS_FILE = os.path.join(root_path,"data_processing","DATA","related_disease","disease_names_processed.csv")
+KEYWORDS_FILE = os.path.join(root_path,"retrieve","disease_names_processed.csv")
 DB_PATH = os.path.join(root_path,"data_processing","DATA","chroma_db")
 
 
