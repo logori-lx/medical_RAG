@@ -116,18 +116,19 @@ export default function ChatPage() {
     setIsSending(true);
 
     try {
-      const res: any = await askQuestion(text);
+      // ✅ 现在 askQuestion 返回的是 { answer, context }
+      const res = await askQuestion(text);
 
-      // 兼容后端返回 cases / referenceCases / context / contexts
-      const rawCases =
-        res?.referenceCases || res?.cases || res?.context || res?.contexts || [];
-      const referenceCases = Array.isArray(rawCases)
-        ? rawCases.map((c: any, index: number) => ({
-            id: c.id ?? index + 1,
-            question: c.question ?? "",
-            answer: c.answer ?? "",
-          }))
-        : [];
+      const aiAnswer = res.answer ?? "";
+      const rawContext = Array.isArray(res.context) ? res.context : [];
+
+      // ✅ 映射成统一的 ReferenceCase 结构，方便 UI 使用
+      const referenceCases = rawContext.map((c: any, index: number) => ({
+        id: index + 1,
+        question: c.ask ?? "",
+        answer: c.answer ?? "",
+        department: c.department ?? "",
+      }));
 
       const finalId = uuidv4();
 
@@ -138,8 +139,10 @@ export default function ChatPage() {
             ? {
                 id: finalId,
                 role: "assistant",
-                text: res.response ?? "",
-                referenceCases: referenceCases.length ? referenceCases : undefined,
+                text: aiAnswer,
+                referenceCases: referenceCases.length
+                  ? referenceCases
+                  : undefined,
               }
             : m
         )
@@ -166,6 +169,7 @@ export default function ChatPage() {
       setIsSending(false);
     }
   };
+
 
   /* -------------------- 找到需要打字机的最后一条回答 -------------------- */
   const lastAssistant = [...messages]

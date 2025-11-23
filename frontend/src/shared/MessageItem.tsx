@@ -6,6 +6,7 @@ export interface ReferenceCase {
   id: number;
   question: string;
   answer: string;
+  department?: string;
 }
 
 export interface Message {
@@ -187,6 +188,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 <div>
                   <strong>Answer:</strong> {c.answer}
                 </div>
+                {c.department && (
+      <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
+        <strong>科室：</strong>
+        {c.department}
+      </div>
+    )}
               </div>
             ))}
           </div>
