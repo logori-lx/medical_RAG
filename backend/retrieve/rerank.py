@@ -1,13 +1,12 @@
 import os
 import requests
 import sys
-# 获取项目根目录的绝对路径（当前文件在 retrieve 文件夹下，上一级就是根目录）
+# Obtain the absolute path of the project root directory (the current file is in the "retrieve" folder, and the root directory is at the previous level).
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-# 将根目录加入 Python 系统路径
+# Add the root directory to the Python system path
 sys.path.append(root_path)
 from retrieve.retrieval import Retrieval, RetrievalMethod
 from query_constructing.query_constructor import QueryConstructor
-# try
 
 API_KEY = os.getenv("MEDICAL_RAG")
 
@@ -41,18 +40,18 @@ class Reranker:
                     reranked_doc["rerank_index"] = item["index"]
                     reranked_results.append(reranked_doc)
 
-                print(f"重排序完成，返回前{len(reranked_results)}个结果")
+                print(f"Reordering completed. Before returning {len(reranked_results)} results")
                 return reranked_results
             else:
-                print("重排序API返回格式异常，使用原始排序")
+                print("The reordering API returns a format exception and uses the original sort")
                 return documents[:top_k]
         except Exception as e:
-            print(f"重排序失败: {e}，使用原始排序")
+            print(f"Reordering failed: {e}，Use the original sort")
             return documents[:top_k]
     
     
 if __name__ == "__main__":
-    query = "得了糖尿病需要注意什么"
+    query = "What should be noted if one has diabetes"
     query_constructor = QueryConstructor(API_KEY)
     retriever = Retrieval(query_constructor=query_constructor)
     documents = retriever.retrieve(retrieval_type=RetrievalMethod.BM25.value,query=query, top_k=50) 

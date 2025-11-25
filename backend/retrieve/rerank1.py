@@ -20,14 +20,14 @@ class Rerank:
         if not docs:
             return []
 
-        # 优先尝试 API 排序（如果拿到了 key）
+        # Try API sorting first (if the key is obtained)
         if self.api_key:
             try:
                 return self._api_rerank(query, docs, top_k)
             except Exception as e:
                 print(f"[Rerank-API失败] {e}")
 
-        # 无 key 或失败 → 本地 score 兜底
+        # No key or failure → Local score as a safety net
         return self._score_rerank(docs, top_k)
 
     def _api_rerank(self, query: str, docs: List[Dict], top_k: int) -> List[Dict]:
@@ -44,12 +44,12 @@ class Rerank:
 
         resp = requests.post(self.url, json=payload, headers=headers).json()
 
-        # API 返回异常 → 兜底排序
+        # API returns an exception → fallback sort
         if "results" not in resp:
-            print("[API返回异常，将使用 score 排序]")
+            print("[The API returns an exception, which will be sorted using score]")
             return self._score_rerank(docs, top_k)
 
-        # 按 relevance_score 排序取 topK（保持原结构不新增字段）
+        # Sort by relevance_score to take the topK (keep the original structure without adding new fields)
         ranked = sorted(resp["results"], key=lambda x: x["relevance_score"], reverse=True)
         return [docs[i["index"]] for i in ranked][:top_k]
 
@@ -60,7 +60,7 @@ class Rerank:
 
 if __name__ == "__main__":
 
-    query = "糖尿病的症状有哪些"
+    query = "What are the symptoms of diabetes"
     qc = QueryConstructor(API_KEY)
     retriever = Retrieval(query_constructor=qc)
 

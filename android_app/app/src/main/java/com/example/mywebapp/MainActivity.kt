@@ -11,8 +11,8 @@ import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
 
-    // TODO: 在这里修改你的 IP 地址或 网址
-    // 注意：如果是 HTTP 开头，必须在 AndroidManifest.xml 中配置 android:usesCleartextTraffic="true"
+    // TODO: Modify your IP address or URL here
+    // Note: If it starts with HTTP, you must configure android:usesCleartextTraffic="true" in AndroidManifest.xml
     private val targetUrl = "http://47.245.121.54:5173"
 
     private lateinit var webView: WebView
@@ -24,36 +24,36 @@ class MainActivity : AppCompatActivity() {
 
         webView = findViewById(R.id.webView)
 
-        // 配置 WebView 设置
+        // Configure WebView settings
         webView.settings.apply {
-            javaScriptEnabled = true // 启用 JS，大部分网页需要
-            domStorageEnabled = true // 启用 DOM 存储，防止部分网页加载空白
-            useWideViewPort = true   // 将图片调整到适合 webview 的大小
-            loadWithOverviewMode = true // 缩放至屏幕大小
+            javaScriptEnabled = true // Enable JS, required by most web pages
+            domStorageEnabled = true // Enable DOM storage to prevent some pages from loading blank
+            useWideViewPort = true   // Adjust images to fit WebView size
+            loadWithOverviewMode = true // Scale to screen size
         }
 
-        // 设置 WebViewClient，确保链接在当前 APP 内打开，而不是跳转到 Chrome 浏览器
+        // Set WebViewClient to ensure links open within the app, not in Chrome
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                // 返回 false 表示由 WebView 自己处理该 URL
+                // Return false means the WebView handles the URL itself
                 return false
             }
         }
 
-        // 设置 WebChromeClient (可选，用于处理网页标题、进度条等)
+        // Set WebChromeClient (optional, used for page title, progress bar, etc.)
         webView.webChromeClient = WebChromeClient()
 
-        // 加载网页
+        // Load web page
         webView.loadUrl(targetUrl)
 
-        // 处理物理返回键逻辑 (Android 13+ 推荐写法)
+        // Handle physical back button logic (recommended for Android 13+)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (webView.canGoBack()) {
-                    // 如果网页可以后退，则后退网页
+                    // If the web page can go back, go back
                     webView.goBack()
                 } else {
-                    // 否则退出 APP
+                    // Otherwise, exit the app
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
                 }
