@@ -65,6 +65,5 @@ if __name__ == "__main__":
     retriever = Retrieval(query_constructor=qc)
 
     docs = retriever.retrieve(RetrievalMethod.BM25.value, query, top_k=50)
-
     reranker = Rerank()
     results = reranker.rerank(query, docs, top_k=5)
