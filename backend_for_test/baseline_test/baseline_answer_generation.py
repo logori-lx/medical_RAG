@@ -3,26 +3,26 @@ from __future__ import annotations
 """
 baseline_answer_generation.py
 
-功能:
-  - 使用“普通大模型”（这里用智谱 GLM-4.5-flash）仅基于问题本身生成答案
-  - 不使用任何检索到的文档作为上下文
-  - 输出 JSON: generated_plain_answers.json
+Function:
+  - Generate the answer only based on the question itself using a "common large model" (here using Zhipu GLM-4.5-flash)
+  - Do not use any retrieved documents as context
+  - output JSON: generated_plain_answers.json
       [
         {
           "id": rag_generate_and_ragas_test,
           "user_input": "...",
           "response": "...",
-          "retrieved_contexts": []   # 注意: baseline 不用检索，这里是空列表
+          "retrieved_contexts": []   # Note: The baseline does not need to be retrieved; it is an empty list here
         },
         ...
       ]
 
-依赖:
+dependency:
     pip install "zhipuai>=2.0.0"
 
-环境变量:
-    推荐设置环境变量 ZHIPUAI_API_KEY 为你的智谱 API key
-    或者直接把 key 写到下面 ZHIPU_API_KEY 里
+Environmental variable:
+    We recommend setting the environment variable ZHIPUAI_API_KEY to your Zhipu API key.
+    Or you can directly write the key to the ZHIPU_API_KEY below
 """
 
 import json
@@ -35,12 +35,12 @@ except ImportError:
     ZhipuAI = None  # type: ignore
 
 
-# ====== rag_generate_and_ragas_test. 配置区域 ============================================
+# ====== rag_generate_and_ragas_test. Configuration area ============================================
 
 REWRITTEN_QUERY_PATH = "rewritten_query.json"
 OUTPUT_PATH = "generated_plain_answers.json"
 
-# 智谱 API Key：优先用环境变量，其次你可以直接写死到字符串里
+# SmartSpectrum API Key: Environment variables are preferred, but you can also hardcode it into a string.
 ZHIPU_API_KEY = os.getenv("ZHIPUAI_API_KEY") or "d0b8bc52cf6b4c368982dfdd32384757.UcWBjZr72H7AWgyN"
 ZHIPU_MODEL = "glm-4.5-flash"
 
@@ -48,16 +48,16 @@ ZHIPU_MODEL = "glm-4.5-flash"
 
 
 class ZhipuLLMClient:
-    """简单封装一下 GLM 聊天接口"""
+    """Here's a simple wrapper around the GLM chat interface."""
 
     def __init__(self, api_key: str, model: str = ZHIPU_MODEL) -> None:
         if ZhipuAI is None:
-            raise ImportError("未安装 zhipuai，请先运行: pip install zhipuai")
+            raise ImportError("If zhipuai is not installed, please run it first.: pip install zhipuai")
 
         if (not api_key) or "在这里填你的智谱APIKey" in api_key:
             raise ValueError(
-                "未提供智谱 API Key。请设置环境变量 ZHIPUAI_API_KEY，"
-                "或者在本文件顶部 ZHIPU_API_KEY 写入你的 key。"
+                "No Zhipu API Key provided. Please set the environment variable ZHIPUAI_API_KEY."
+                "Alternatively, enter your key in ZHIPU_API_KEY at the top of this file."
             )
 
         self._client = ZhipuAI(api_key=api_key)
@@ -81,21 +81,21 @@ def load_rewritten_queries(path: str) -> List[Dict[str, Any]]:
         data = json.load(f)
 
     if not isinstance(data, list):
-        raise ValueError(f"{path} 顶层 JSON 必须是列表(list)。")
+        raise ValueError(f"{path} The top-level JSON must be a list.")
 
     for idx, item in enumerate(data):
         if not isinstance(item, dict):
-            raise ValueError(f"{path} 中第 {idx} 条记录不是对象(dict)。")
+            raise ValueError(f"The record {idx} in {path} is not an object (dict).")
         if "id" not in item or "rewritten_query" not in item:
             raise ValueError(
-                f"{path} 中第 {idx} 条记录缺少 id 或 rewritten_query 字段。"
+                f"The record {idx} in {path} is missing the id or rewritten_query field."
             )
 
     return data
 
 
 def build_plain_system_prompt() -> str:
-    """普通大模型（非 RAG）使用的系统提示词。"""
+    """System prompts used for common large models (non-RAG)."""
     return (
         "你是一个谨慎的中文全科医生助理。\n"
         "现在不会给你任何检索到的问诊记录或文献，只能依靠你的一般医学知识做出解释和建议。\n"
@@ -109,7 +109,7 @@ def build_plain_system_prompt() -> str:
 
 
 def build_user_prompt(question: str) -> str:
-    """把用户问题简单包装一下发给大模型。"""
+    """Simply package the user's question and send it to the large model."""
     return (
         "患者的提问如下：\n"
         f"{question.strip()}\n\n"
@@ -119,56 +119,56 @@ def build_user_prompt(question: str) -> str:
 
 
 def main() -> None:
-    print("=== Baseline: 普通大模型答案生成 ===\n")
+    print("=== Baseline: Generate answers for general large models ===\n")
 
     # rag_generate_and_ragas_test. 读取 rewritten_query.json
     try:
         queries = load_rewritten_queries(REWRITTEN_QUERY_PATH)
     except Exception as e:
-        print(f"[BASELINE] 读取 {REWRITTEN_QUERY_PATH} 失败：{e}")
+        print(f"[BASELINE] read {REWRITTEN_QUERY_PATH} 失败：{e}")
         return
 
-    print(f"[BASELINE] 成功读取 {len(queries)} 条 rewritten_query。")
+    print(f"[BASELINE] successfully read {len(queries)}  rewritten_query.")
 
-    # 2. 初始化 GLM 客户端
+    # 2. Initialize the GLM client
     try:
         llm = ZhipuLLMClient(api_key=ZHIPU_API_KEY)
     except Exception as e:
-        print("[BASELINE] 初始化 ZHIPU LLM 失败：", e)
+        print("[BASELINE] Initialization of ZHIPU LLM failed:", e)
         return
 
     system_prompt = build_plain_system_prompt()
 
     results: List[Dict[str, Any]] = []
 
-    # 3. 逐条生成回答
+    # 3. Generate answers one by one
     for item in queries:
         qid = item["id"]
         question = item["rewritten_query"]
 
-        print(f"\n[BASELINE] 生成第 {qid} 条答案中...")
+        print(f"\n[BASELINE] In generating the {qid}th answer...")
         user_prompt = build_user_prompt(question)
 
         try:
             answer = llm.chat(system_prompt=system_prompt, user_prompt=user_prompt)
         except Exception as e:
-            print(f"[BASELINE] 调用 LLM 失败（id={qid}）：{e}")
-            answer = f"[ERROR] 模型调用失败：{e}"
+            print(f"[BASELINE] The LLM call failed (id={qid}): {e}")
+            answer = f"[ERROR] Model call failed:{e}"
 
         results.append(
             {
                 "id": qid,
                 "user_input": question,
                 "response": answer,
-                "retrieved_contexts": [],  # baseline 不用检索
+                "retrieved_contexts": [],  # baseline No need to search
             }
         )
 
-    # 4. 保存为 generated_plain_answers.json
+    # 4. save as generated_plain_answers.json
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
-    print(f"\n[BASELINE] 已将普通大模型回答保存到: {OUTPUT_PATH}")
+    print(f"\n[BASELINE] The answers for the regular large model have been saved to: {OUTPUT_PATH}")
 
 
 if __name__ == "__main__":

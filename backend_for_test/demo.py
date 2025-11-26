@@ -4,7 +4,7 @@ import re
 import time  # ✅ 用来模拟大模型耗时
 
 class RequestHandler(BaseHTTPRequestHandler):
-    # 解析JSON请求体
+    # Parsing the JSON request body
     def _parse_json_body(self, length):
         try:
             body = self.rfile.read(length).decode('utf-8')
@@ -12,40 +12,40 @@ class RequestHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             return None
 
-    # 发送JSON响应
+    # Send JSON response
     def _send_json_response(self, data, status_code=200):
         self.send_response(status_code)
         self.send_header('Content-type', 'application/json')
-        # 如果前端是在 localhost 上用 fetch，可以顺便加一行 CORS（可选）
+        # If the frontend is using fetch on localhost, you can also add a CORS line (optional).
         # self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
 
-    # 处理POST请求
+    # Handling POST requests
     def do_POST(self):
-        # 仅处理指定路径
+        # Process only the specified path
         if self.path != '/api/user/ask':
             self._send_json_response(
-                {'error': '路径不存在'},
+                {'error': 'Path does not exist'},
                 status_code=404
             )
             return
 
-        # 检查Content-Type是否为JSON
+        # Check if Content-Type is JSON
         content_type = self.headers.get('Content-Type', '')
         if not re.search(r'application/json', content_type):
             self._send_json_response(
-                {'error': '请使用application/json格式'},
+                {'error': 'Please use application/json format'},
                 status_code=415
             )
             return
 
-        # 读取并解析请求体
+        # Read and parse the request body
         try:
             content_length = int(self.headers['Content-Length'])
         except (KeyError, ValueError):
             self._send_json_response(
-                {'error': '缺少Content-Length头'},
+                {'error': 'Missing Content-Length header'},
                 status_code=400
             )
             return
@@ -53,18 +53,18 @@ class RequestHandler(BaseHTTPRequestHandler):
         request_data = self._parse_json_body(content_length)
         if not request_data or 'question' not in request_data:
             self._send_json_response(
-                {'error': '请求体缺少question字段'},
+                {'error': 'The request body is missing the question field.'},
                 status_code=400
             )
             return
 
         question = request_data.get("question", "")
-        print(f"收到问题：{question}")
+        print(f"Received question：{question}")
 
-        # ✅ 模拟大模型思考耗时：停顿 5 秒
+        # Simulated large-scale model thinking time: 5-second pause
         time.sleep(5)
 
-        # mock 主回答
+        # mock main answer
         mock_response = (
             "得了高血压平时需要注意以下几点："
             "1. 饮食方面，控制食盐摄入量，每天不超过 6 克，避免吃太油腻的食物，"
@@ -74,7 +74,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             "4. 若通过生活方式调整后血压控制效果不佳，应在医生指导下配合降压药物治疗。"
         )
 
-        # mock 参考案例
+        # mock reference case
         mock_cases = [
             {
                 "id": 1,
@@ -94,27 +94,27 @@ class RequestHandler(BaseHTTPRequestHandler):
             },
         ]
 
-        # 返回响应：response + cases
+        # return response：response + cases
         self._send_json_response({
             "response": mock_response,
             "cases": mock_cases,
         })
 
-    # 处理其他请求方法
+    # Handling other request methods
     def do_GET(self):
         self._send_json_response(
-            {'message': '请使用POST方法访问 /api/user/ask 接口'},
+            {'message': 'Please use the POST method to access the /api/user/ask interface.'},
             status_code=405
         )
 
 def run_server(host='0.0.0.0', port=886):
     server_address = (host, port)
     httpd = HTTPServer(server_address, RequestHandler)
-    print(f"服务器启动，监听 {host}:{port} ...")
+    print(f"Server starts up and listens. {host}:{port} ...")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n服务器正在关闭...")
+        print("\nThe server is shutting down....")
         httpd.server_close()
 
 if __name__ == '__main__':

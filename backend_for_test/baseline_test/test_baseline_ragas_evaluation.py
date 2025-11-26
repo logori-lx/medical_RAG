@@ -7,22 +7,22 @@ from baseline_ragas_evaluation import (
 
 
 class TestBuildFunctions:
-    """测试构建函数（简化版）"""
+    """Simplified version of the test constructor function"""
 
     def test_build_reference_map_basic(self):
-        """测试构建参考映射的基本功能"""
-        # 模拟REFERENCE_LIST
+        """Test the basic functionality of building reference maps"""
+        # Simulate REFERENCE_LIST
         with patch('baseline_ragas_evaluation.REFERENCE_LIST', [
             {"reference": "答案1"},
             {"reference": "答案2"}
         ]):
             result = build_reference_map()
-            # 基本验证：返回字典且包含预期键
+            # Basic validation: Returns a dictionary containing the expected keys.
             assert isinstance(result, dict)
             assert len(result) > 0
 
     def test_build_ragas_input_plain_basic(self):
-        """测试构建RAGAS输入的基本功能"""
+        """Testing the basic functionality of building RAGAS inputs"""
         # 简化测试数据
         generated_plain = [
             {"id": 1, "user_input": "问题1", "response": "回答1"}
@@ -41,22 +41,22 @@ class TestBuildFunctions:
 
 
 class TestMainFunction:
-    """测试主函数（简化版）"""
+    """Test main function (simplified version)"""
 
     @patch('baseline_ragas_evaluation.load_generated_plain_answers')
     @patch('baseline_ragas_evaluation.load_topk_contexts')
     def test_main_basic_flow(self, mock_load_contexts, mock_load_answers):
-        """测试主函数基本流程"""
-        # 模拟基本数据
+        """Basic process of testing the main function"""
+        # Simulation basic data
         mock_load_answers.return_value = [
             {"id": 1, "user_input": "问题1", "response": "回答1"}
         ]
         mock_load_contexts.return_value = {1: ["上下文1"]}
 
-        # 导入并运行主函数
+        # Import and run the main function
         from baseline_ragas_evaluation import main
 
-        # 使用patch避免所有文件操作和外部调用
+        # Use patch to avoid all file operations and external calls.
         with patch('baseline_ragas_evaluation.build_reference_map') as mock_build_ref, \
                 patch('baseline_ragas_evaluation.build_ragas_input_plain') as mock_build_input, \
                 patch('baseline_ragas_evaluation.save_json'), \
@@ -66,13 +66,13 @@ class TestMainFunction:
             mock_build_ref.return_value = {1: "参考1"}
             mock_build_input.return_value = [{"test": "data"}]
 
-            # 简单调用验证没有异常
+            # The simple call verification showed no exceptions.
             try:
                 main()
-                # 如果运行到这里说明基本流程正常
+                # If the process has progressed to this point, it means the basic workflow is normal.
                 assert True
             except Exception:
-                # 如果有异常也正常，我们只是测试基本流程
+                # It's normal if there are any abnormalities; we're just testing the basic process.
                 assert True
 
 

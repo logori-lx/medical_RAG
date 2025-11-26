@@ -7,10 +7,10 @@ from ragas_evaluation import (
 
 
 class TestBuildRagasInput:
-    """测试构建RAGAS输入（简化版）"""
+    """Test the construction of RAGAS input (simplified version)"""
 
     def test_build_with_simple_data(self):
-        """测试简单数据构建"""
+        """Test simple data construction"""
         generated = [
             {
                 "user_input": "问题1",
@@ -25,39 +25,39 @@ class TestBuildRagasInput:
 
         result = build_ragas_input(generated, references)
 
-        # 基本验证
+        # Basic verification
         assert isinstance(result, list)
         assert len(result) == 1
         assert result[0]["user_input"] == "问题1"
 
     def test_build_empty_inputs(self):
-        """测试空输入"""
+        """Test empty input"""
         result = build_ragas_input([], [])
         assert result == []
 
 
 class TestReferenceList:
-    """测试参考列表（简化版）"""
+    """Simplified Test Reference List"""
 
     def test_reference_list_exists(self):
-        """测试参考列表存在性"""
+        """Test reference list existence"""
         assert isinstance(REFERENCE_LIST, list)
         assert len(REFERENCE_LIST) > 0
 
     def test_reference_list_structure_basic(self):
-        """测试参考列表基本结构"""
-        for ref in REFERENCE_LIST[:2]:  # 只检查前两个，避免过多测试
+        """Basic structure of the test reference list"""
+        for ref in REFERENCE_LIST[:2]:  # Only check the first two to avoid excessive testing.
             assert isinstance(ref, dict)
             assert "reference" in ref
 
 
 class TestMainFunction:
-    """测试主函数（简化版）"""
+    """Test main function (simplified version)"""
 
     @patch('ragas_evaluation.load_generated_answers')
     def test_main_basic_flow(self, mock_load_answers):
-        """测试主函数基本流程"""
-        # 模拟基本数据
+        """Basic process of testing the main function"""
+        # Simulation basic data
         mock_load_answers.return_value = [
             {
                 "user_input": "问题1",
@@ -66,10 +66,10 @@ class TestMainFunction:
             }
         ]
 
-        # 导入并运行主函数
+        # Import and run the main function
         from ragas_evaluation import main
 
-        # 使用patch避免所有文件操作和外部调用
+        # Use patch to avoid all file operations and external calls.
         with patch('ragas_evaluation.build_ragas_input') as mock_build_input, \
                 patch('ragas_evaluation.save_json'), \
                 patch('ragas_evaluation.run_ragas'), \
@@ -77,14 +77,14 @@ class TestMainFunction:
 
             mock_build_input.return_value = [{"test": "data"}]
 
-            # 简单调用验证没有异常
+            # The simple call verification showed no exceptions.
             try:
                 main()
-                # 如果运行到这里说明基本流程正常
+                # If the process has progressed to this point, it means the basic workflow is normal.
                 assert True
             except Exception as e:
-                # 如果有异常也正常，我们只是测试基本流程
-                # 打印异常信息便于调试，但不失败
+                # It's normal for there to be exceptions; we're just testing the basic process.
+                # Printing exception information is helpful for debugging, but it doesn't mean the test will fail.
                 print(f"Main function raised expected exception: {e}")
                 assert True
 
