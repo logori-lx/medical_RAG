@@ -1,9 +1,9 @@
 import os
 import requests
 import sys
-# 获取项目根目录的绝对路径（当前文件在 retrieve 文件夹下，上一级就是根目录）
+# Obtain the absolute path of the project root directory (the current file is in the "retrieve" folder, and the root directory is at the previous level).
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-# 将根目录加入 Python 系统路径
+# Add the root directory to the Python system path
 sys.path.append(root_path)
 from retrieve.retrieval import Retrieval, RetrievalMethod
 from query_constructing.query_constructor import QueryConstructor

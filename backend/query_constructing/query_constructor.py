@@ -25,16 +25,16 @@ class QueryConstructor:
         Transform user's colloquial health inquiry into a professional medical search query
         """
         prompt = f"""
-        You are a professional medical terminology and clinical language optimization assistant. Your task is to rewrite the user's health inquiry or symptom description into a form that conforms to medical standards and is suitable for searching in a professional medical knowledge base.
+        你是一名专业的医疗术语与临床语言优化助手。你的任务是将用户输入的健康咨询或症状描述，改写为更符合医学规范、适合在专业医疗知识库中检索的形式。
 
-        Please follow these principles:
-        1. **Terminology Standardization**: Convert colloquial body parts or symptom descriptions into standard medical terms (e.g., "sore throat" → "pharyngalgia", "diarrhea" → "diarrhea").
-        2. **Key Element Extraction**: Retain key symptoms, duration, triggers, and accompanying symptoms; remove irrelevant emotional expressions (e.g., "I'm worried", "help!").
-        3. **Logical Clarity**: If multiple symptoms are included, organize them into a coherent clinical statement.
-        4. **Neutral and Objective**: Maintain an objective tone, do not change the original meaning, do not diagnose (do not invent diseases unless the user specifically asks about a particular disease).
-        5. **Strict Constraints**: Do not include any explanations, prefixes, or suffixes; only return the rewritten sentence.
+        请遵循以下原则：
+        1. **术语标准化**：将口语化的身体部位或症状描述转化为标准的医学术语（例如：将“嗓子疼”改为“咽痛”，将“拉肚子”改为“腹泻”）。
+        2. **要素提取**：保留关键的症状、持续时间、诱发因素和伴随症状，去除无关的情绪化表达（如“我很担心”、“救命啊”等）。
+        3. **逻辑清晰**：如果包含多个症状，请梳理为连贯的临床表述。
+        4. **中立客观**：保持客观的陈述语气，不改变原意，不进行诊断（不要凭空捏造病名，除非用户直接询问特定疾病）。
+        5. **严格约束**：输出中不要出现任何解释、前缀或后缀，只返回改写后的一句话。
 
-        Original query: {query}
+        原查询：{query}
         """
 
         try:
@@ -85,7 +85,7 @@ class QueryConstructor:
         content = content.replace("\n", "")
         list_content = content.split("|")
         list_content = [d.strip() for d in list_content]
-        return list_content or ["None"]
+        return list_content or ["无"]
 
     from typing import List, Dict, Tuple
 
@@ -111,16 +111,16 @@ class QueryConstructor:
                 if len(answer_text) > 300: answer_text = answer_text[:300] + "..."
 
                 entry = (
-                    f"[Case ID: {i}]\n"
-                    f"  - Patient question: {ask_text}\n"
-                    f"  - Doctor answer: {answer_text}\n"
+                    f"[案例ID: {i}]\n"
+                    f"  - 患者提问: {ask_text}\n"
+                    f"  - 医生回答: {answer_text}\n"
                 )
                 formatted.append(entry)
 
             return "\n".join(formatted)
 
         # 1. Format context: specifically handle ask/answer structure
-        context_block = _format_qa_context(passages) if passages else "(No similar cases or doctor answers retrieved)"
+        context_block = _format_qa_context(passages) if passages else "(未检索到相似病例或医生回答)"
 
         # 2. System Prompt: define persona, safety boundaries, and language style
         system_prompt = (
