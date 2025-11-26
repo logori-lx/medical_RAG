@@ -19,7 +19,7 @@ def _get_query_constructor() ->QueryConstructor:
 def _get_retriever() -> Retrieval:
     global _retriever
     if _retriever is None:
-        # 若本地向量库未初始化，ret.py 内部会抛出清晰的报错提示
+        # If the local vector library is not initialized, ret.py will throw a clear error prompt internally
         _query_constructor = _get_query_constructor()
         _retriever = Retrieval(_query_constructor)
     return _retriever
@@ -27,17 +27,17 @@ def _get_retriever() -> Retrieval:
 
 def initialize_rag_system():
     """
-    预初始化 RAG 系统（包括 retriever 和 client）。
-    建议在应用启动时调用，避免首次请求时的初始化延迟。
+    Pre-initialize the RAG system (including retriever and client).
+It is recommended to call it when the application starts to avoid initialization delay during the first request.
     """
-    print("正在初始化 RAG 系统...")
+    print("The RAG system is being initialized...")
     try:
         retriever = _get_retriever()
-        print("✓ Retriever 初始化完成（包括 BM25 索引）")
+        print("✓ Retriever initialization completed (including BM25 index)")
     except Exception as e:
-        print(f"✗ Retriever 初始化失败: {e}")
+        print(f"✗ Retriever Retriever initialization failed: {e}")
     
-    print("RAG 系统初始化完成！")
+    print("The initialization of the RAG system is complete!")
     return retriever
 
 
@@ -50,15 +50,15 @@ def retrieve_and_generate(
     max_tokens: int = 65536,
 ) -> Tuple[str, List[Dict]]:
     """
-    完整 RAG：检索 -> 提示构建 -> 大模型生成。
+    Complete RAG: Search -> Prompt Build -> Large Model Generation.
 
-    返回：
-    - answer: 最终回答（中文）
-    - context: 引用的检索结果（便于前端展示溯源）
+    Return
+    - answer: Final Answer (Chinese)
+    - context: The cited search results (for front-end display and traceability)
     """
     retriever = _get_retriever()
     rewritten_query = _get_query_constructor().get_query(question)
-    # 召回
+    # Recall
     contexts = retriever.retrieve(
         query=rewritten_query, top_k=50,  retrieval_type=search_type
     )

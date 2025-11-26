@@ -289,7 +289,7 @@ class Retrieval:
             raise ValueError(f"Unsupported search types：{retrieval_type}，Optional value：vector/keywords/hybrid/bm25")
     
 if __name__ == "__main__":
-    query = "What are the symptoms of diabetes？"
+    query = "糖尿病的症状有哪些？"
     top_k = 3
     retriever = Retrieval(query_constructor= QueryConstructor())
     query_constructor = QueryConstructor()

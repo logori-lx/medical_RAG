@@ -64,15 +64,15 @@ class QueryConstructor:
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a medical expert. Extract diseases mentioned in the user's input. " \
-                               "For example: " \
-                               "User: I want to know the long-term medication risks of epilepsy " \
-                               "You: Epilepsy " \
-                               "User: Can people with high blood pressure donate blood? " \
-                               "You: Hypertension " \
-                               "If the user does not mention any disease, output: None " \
-                               "If the user mentions multiple diseases, output the two most relevant diseases separated by |. " \
-                               "Only output disease names, no other content. Do not add any punctuation other than |."
+                    "content": "你是一个医学专家。你会根据用户的话，提炼出与之相关的疾病。" \
+                               "如下面两个例子：" \
+                               "用户：想知道癫痫长期用药的危害有什么" \
+                               "你：癫痫" \
+                               "用户：有高血压的人能献血吗？" \
+                               "你：高血压" \
+                               "如果用户没有提到疾病，你应当输出：无" \
+                               "如果用户提到了多种疾病，你应当输出最符合的2个疾病名称，用|隔开。" \
+                               "请你只输出疾病名称，不要输出其他内容。不允许添加除|以外的其他标点符号。" \
                 },
                 {
                     "role": "user",
@@ -124,24 +124,24 @@ class QueryConstructor:
 
         # 2. System Prompt: define persona, safety boundaries, and language style
         system_prompt = (
-            "You are a professional, warm, and rigorous intelligent medical assistant. Your task is to answer the user's inquiry based on retrieved historical doctor-patient Q&A data.\n"
-            "**Core Principles**:\n"
-            "- **Role Definition**: You are not a doctor and cannot provide definitive diagnoses. Your answers are for reference only and do not replace in-person medical consultation.\n"
-            "- **Evidence Priority**: Must summarize based on the retrieved 'doctor answers'; do not go beyond the reference material.\n"
-            "- **Easy to Understand**: Users are laypeople; convert medical terms into plain language (e.g., 'upper respiratory infection' → 'cold').\n"
-            "- **Safety Red Line**: If the user describes critical conditions (e.g., chest pain, difficulty breathing, severe trauma), recommend immediate medical attention rather than just medication.\n"
-            "- **No Fabrication**: Do not invent drug names or treatment plans that are not present in the retrieved material.\n"
+            "你是一名专业、温暖且严谨的智能医疗健康助手。你的任务是根据检索到的【历史医患问答】数据，回答当前用户的咨询。\n"
+            "**核心原则**：\n"
+            "- **角色定位**：你不是医生，不能下确诊诊断。你的回答仅作为参考信息，不能替代线下就医。\n"
+            "- **依据优先**：必须基于检索到的“医生回答”进行归纳总结，不要脱离参考资料随意发挥。\n"
+            "- **通俗易懂**：用户是普通人，请将医学术语转化为大白话（例如将“上呼吸道感染”解释为“感冒”）。\n"
+            "- **安全红线**：若用户描述涉及急危重症（如胸痛、呼吸困难、剧烈外伤），必须优先建议立即就医，而非仅推荐药物。\n"
+            "- **禁止造假**：严禁编造检索资料中不存在的药品名称或治疗方案。\n"
         )
 
         # 3. User Prompt: guide answer logic and citation format
         user_prompt = (
-            f"User's current inquiry:\n{question}\n\n"
-            f"Retrieved similar doctor-patient Q&A (for reference only):\n{context_block}\n\n"
-            "Please strictly follow these steps to generate the answer:\n"
-            "1) Directly answer the user's question in plain language.\n"
-            "2) Summarize the retrieved doctors' viewpoints and tell the user how such issues are 'usually handled'.\n"
-            "3) If relevant cases exist, only show how they support the statements; ignore unrelated cases.\n"
-            "4) Do not output content unrelated to medical advice, and do not add cases beyond the retrieved ones.\n"
+            f"用户当前咨询：\n{question}\n\n"
+            f"检索到的相似医患问答（仅供参考）：\n{context_block}\n\n"
+            "请严格按照以下步骤生成回答：\n"
+            "1)用通俗的语言直接回答用户的疑问。\n"
+            "2) 总结检索到的医生观点，告诉用户“通常情况下”这类问题如何处理。\n"
+            "3) 若有相关案例，仅说明其如何支持条文含义；无关案例请忽略。\n"
+            "4) 禁止输出与医疗建议无关的内容，禁止补充除提供案例以外的案例\n"
         )
 
         return system_prompt, user_prompt
@@ -165,7 +165,7 @@ class QueryConstructor:
             answer = resp.choices[0].message.content.strip()
         except Exception as e:
             # Fallback strategy: do not block the overall process, return brief error message with context
-            answer = f"Sorry, an error occurred during generation: {e}. The following are the retrieved related cases for reference."
+            answer = f"抱歉，生成过程中出现异常：{e}。以下为检索到的相关病例供参考。"
         return answer
 
 

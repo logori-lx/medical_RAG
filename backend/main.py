@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Any, Dict, List
 
-# 与用户示例一致：从 rag_pipeline 导入
+# Consistent with the user example: Imported from rag_pipeline
 from pipeline import retrieve_and_generate
 
 app = FastAPI()
