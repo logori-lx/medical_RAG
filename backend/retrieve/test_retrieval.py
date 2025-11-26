@@ -238,7 +238,7 @@ class TestRetrieval:
 
     def test_retrieve_invalid_type(self, retrieval):
         """Test invalid search types"""
-        with pytest.raises(ValueError, match="不支持的检索类型"):
+        with pytest.raises(ValueError, match="Unsupported search types"):
             retrieval.retrieve("invalid_type", "糖尿病症状", top_k=2)
 
 
