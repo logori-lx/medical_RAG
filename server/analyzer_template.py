@@ -7,6 +7,7 @@ import chromadb
 from typing import List, Dict, Any
 from git import Repo
 from zhipuai import ZhipuAI
+import getpass
 
 # ==========================================
 # 1. 基础环境与配置
@@ -181,7 +182,14 @@ def fetch_dynamic_rules():
 
 def report_to_cloud(msg, risk, summary):
     try:
-        user = os.getenv("USERNAME") or "Unknown"
+        # 使用 getpass.getuser() 自动获取当前登录的系统用户名
+        # 它兼容 Windows 和 Linux
+        try:
+            user = getpass.getuser()
+        except Exception:
+            # 兜底方案：如果 getpass 失败，尝试读取环境，最后设为 Unknown
+            user = os.getenv("USERNAME") or os.getenv("USER") or "Unknown"
+
         payload = {
             "developer_id": user,
             "repo_name": os.path.basename(os.path.abspath(REPO_PATH)),
@@ -189,8 +197,10 @@ def report_to_cloud(msg, risk, summary):
             "risk_level": risk,
             "ai_summary": summary
         }
+        # 发送请求
         requests.post(TRACK_URL, json=payload, timeout=2)
-    except: pass
+    except Exception:
+        pass
 
 def process_changes_with_rag():
     if not API_KEY: return {}, ""
