@@ -17,3 +17,4 @@ git_guard_cli.py
 server/*.csv
 server/ci_workspace
 server/ci_status.json
+server/server_config.json

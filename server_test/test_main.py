@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock, mock_open
 import sys
 import os
 import json
+from datetime import timezone
 
 # Add server directory to path to import main
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -13,12 +14,19 @@ if server_path not in sys.path:
 
 
 from fastapi.testclient import TestClient
-# We need to mock imports that might not exist in the test environment or require API keys
-with patch.dict(sys.modules, {'git': MagicMock(), 'apscheduler.schedulers.asyncio': MagicMock()}):
-    import main
+
+with patch.dict(sys.modules, {
+    'git': MagicMock(), 
+}):
+    pass
 
 class TestServerMain(unittest.TestCase):
     def setUp(self):
+        self.tz_patcher = patch('apscheduler.schedulers.base.get_localzone')
+        self.mock_get_localzone = self.tz_patcher.start()
+        self.mock_get_localzone.return_value = timezone.utc
+        import main
+        self.main_module = main
         self.client = TestClient(main.app)
         
     @patch('main.os.path.exists')
