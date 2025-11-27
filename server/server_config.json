@@ -1,4 +1,4 @@
 {
     "template_format": "[<Domain>][<Type>] <Summary>",
-    "custom_rules": "1. <Domain> must be one of: Backend, Frontend, Infra. Infer this from file extensions or user input. 2. <Type> must be one of: Feat, Fix, Refactor, Perf. 3. <Summary> must be concise and lowercase. Example: [Backend][Refactor] switch config to file storage."
+    "custom_rules": "1. <Domain> must be: Backend, Frontend, Infra.\n2. <Type> must be: Feat, Fix, Refactor.\n3. Example: [Backend][Fix] fix login bug."
 }
