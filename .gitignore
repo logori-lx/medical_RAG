@@ -13,3 +13,4 @@ git_hook/chroma_db
 .venv/
 .git_guard/
 indexer_debug.log
+git_guard_cli.py

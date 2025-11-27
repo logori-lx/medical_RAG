@@ -12,7 +12,7 @@ from zhipuai import ZhipuAI
 # 1. 基础环境与配置
 # ==========================================
 
-# [FIX] Windows GBK 编码修复
+# 尝试修复 Windows 输出编码，失败则忽略
 if sys.platform == 'win32':
     try:
         sys.stdout.reconfigure(encoding='utf-8')
@@ -24,21 +24,17 @@ SERVER_BASE_URL = "http://localhost:8000"
 CONFIG_URL = f"{SERVER_BASE_URL}/api/v1/config"
 TRACK_URL = f"{SERVER_BASE_URL}/api/v1/track"
 
-# 优先读取环境变量，如果没有则尝试从系统读取
 API_KEY = os.getenv("MEDICAL_RAG")
 
-# 自动定位项目根目录
 try:
     repo_obj = Repo(".", search_parent_directories=True)
     REPO_PATH = repo_obj.working_tree_dir
 except:
     REPO_PATH = "."
 
-# 数据库路径
 GUARD_DIR = os.path.join(REPO_PATH, ".git_guard")
 DB_PATH = os.path.join(GUARD_DIR, "chroma_db")
 
-# 文件后缀 -> 集合名称 映射
 EXT_TO_COLLECTION = {
     ".py": "repo_python", ".java": "repo_java", ".js": "repo_js",
     ".ts": "repo_js", ".html": "repo_html", ".go": "repo_go", 
@@ -46,24 +42,19 @@ EXT_TO_COLLECTION = {
 }
 
 # ==========================================
-# 2. 核心类定义 (从原 rerank.py 和 retrieval.py 合并而来)
+# 2. 核心类定义 (Reranker & Retrieval)
 # ==========================================
 
 class Reranker:
-    """调用智谱 AI 进行语义重排序"""
     def __init__(self):
         self.url = "https://open.bigmodel.cn/api/paas/v4/rerank"
         self.model = "rerank-3"
         self.api_key = API_KEY
 
     def rerank(self, query: str, documents: List[Dict], top_k: int = 3) -> List[Dict]:
-        """
-        :param documents: List of dicts, must contain 'answer' key
-        """
         if not self.api_key or not documents:
             return documents[:top_k]
 
-        # 提取纯文本用于 API 调用 (截断防止超长)
         doc_texts = [doc.get("answer", "")[:2000] for doc in documents]
 
         payload = {
@@ -86,7 +77,7 @@ class Reranker:
                 for item in results:
                     original_idx = item['index']
                     doc = documents[original_idx]
-                    doc['score'] = item['relevance_score'] # 更新分数为 Rerank 分数
+                    doc['score'] = item['relevance_score']
                     reranked_docs.append(doc)
                 return reranked_docs
             else:
@@ -95,7 +86,6 @@ class Reranker:
             return documents[:top_k]
 
 class ZhipuEmbeddingFunction(chromadb.EmbeddingFunction):
-    """智谱 Embedding 适配器"""
     def __init__(self):
         self.api_key = API_KEY
         self.client = ZhipuAI(api_key=self.api_key)
@@ -109,12 +99,10 @@ class ZhipuEmbeddingFunction(chromadb.EmbeddingFunction):
             return [[]] * len(input)
 
 class Retrieval:
-    """混合检索管理器 (Vector + Keyword)"""
     def __init__(self):
         if not os.path.exists(DB_PATH):
             self.client = None
             return
-
         self.client = chromadb.PersistentClient(path=DB_PATH)
         self.embedding_function = ZhipuEmbeddingFunction()
         self.vector_distance_max = 2.0
@@ -127,7 +115,6 @@ class Retrieval:
                 embedding_function=self.embedding_function
             )
             results = collection.query(query_texts=[query], n_results=top_k)
-            
             hits = []
             if results['ids'] and results['ids'][0]:
                 for i in range(len(results['ids'][0])):
@@ -145,20 +132,14 @@ class Retrieval:
             return []
 
     def hybrid_retrieve(self, query: str, collection_name: str, top_k: int = 5) -> List[Dict]:
-        # 1. 向量召回 (扩大范围)
         vector_hits = self.vector_retrieve(query, collection_name, top_k=top_k * 2)
-        
-        # 2. 关键词加权 (简单的字面匹配)
         keywords = set(query.split())
         for hit in vector_hits:
             code_content = hit["answer"]
             match_count = sum(1 for kw in keywords if kw in code_content)
-            # 混合打分: Vector(0.7) + Keyword(0.3)
             keyword_score = min(match_count * 0.1, 1.0)
             hit["score"] = (hit["score"] * 0.7) + (keyword_score * 0.3)
             hit["source"] = "hybrid"
-
-        # 3. 排序截断
         sorted_hits = sorted(vector_hits, key=lambda x: x["score"], reverse=True)[:top_k]
         return sorted_hits
 
@@ -170,6 +151,17 @@ class Retrieval:
 # ==========================================
 # 3. 辅助功能函数
 # ==========================================
+
+def get_abort_flag_path():
+    return os.path.join(GUARD_DIR, "abort_commit.flag")
+
+def clean_markdown(text):
+    filtered_text = ""
+    for alphabet in text:
+        if alphabet == '*' or alphabet == '`' or alphabet == '#':
+            continue
+        filtered_text += alphabet
+    return filtered_text.strip()
 
 def get_console_input(prompt_text):
     print(prompt_text, end='', flush=True)
@@ -200,13 +192,8 @@ def report_to_cloud(msg, risk, summary):
         requests.post(TRACK_URL, json=payload, timeout=2)
     except: pass
 
-# ==========================================
-# 4. 业务逻辑：Hybrid Retrieve + Rerank + LLM
-# ==========================================
-
 def process_changes_with_rag():
     if not API_KEY: return {}, ""
-
     try:
         repo = Repo(REPO_PATH)
         try:
@@ -218,8 +205,6 @@ def process_changes_with_rag():
 
     changes = {}
     context_str = ""
-    
-    # 实例化刚才定义的类
     retriever = Retrieval()
     reranker = Reranker()
 
@@ -227,32 +212,94 @@ def process_changes_with_rag():
         if diff.change_type == 'D': continue
         fpath = diff.b_path if diff.b_path else diff.a_path
         if not fpath: continue
-        
         try:
             text = repo.git.diff("--cached", fpath)
             if not text.strip(): text = "(New File)"
             _, ext = os.path.splitext(fpath)
-            
             changes[fpath] = text
-
-            # --- RAG 流程 ---
-            # 1. 混合检索
             candidates = retriever.retrieve_code(query_diff=text, file_ext=ext, top_k=10)
-            
             if candidates:
-                # 2. 重排序
                 final_docs = reranker.rerank(query=text, documents=candidates, top_k=3)
-                
                 for doc in final_docs:
                     score = doc.get('score', 0)
                     content = doc.get('answer', '')[:500]
                     context_str += f"\n[Ref Score: {score:.2f}]:\n{content}\n"
-
         except Exception: pass
 
     return changes, context_str
 
-def run(msg_file_path):
+# ==========================================
+# 4. 业务模式：纯报告模式 (Pre-commit)
+# ==========================================
+def run_report_mode():
+    flag_path = get_abort_flag_path()
+    if os.path.exists(flag_path):
+        os.remove(flag_path)
+
+    print(f"[Git-Guard] Repo: {os.path.abspath(REPO_PATH)}")
+    
+    changes, context = process_changes_with_rag()
+    
+    if not changes:
+        print("[Info] No staged changes to analyze.")
+        return
+
+    print("[Git-Guard] Analyzing Impact & Risk (RAG Enhanced)...")
+    
+    prompt = f"""
+    Role: Senior Technical Lead conducting a Pre-commit Risk Assessment.
+    Code Changes: {str(list(changes.values()))[:3000]}
+    Context: {context[:1500]}
+    Task: Generate a concise impact report.
+    STRICT OUTPUT FORMAT (Plain Text):
+    RISK LEVEL: <High/Medium/Low>
+    ------------------------------------------------------------
+    IMPACT ANALYSIS:
+    - <Point 1>
+    - <Point 2>
+    ------------------------------------------------------------
+    Constraint: Do NOT use Markdown formatting. Keep it short.
+    """
+    
+    try:
+        client = ZhipuAI(api_key=API_KEY)
+        res = client.chat.completions.create(
+            model="glm-4-flash", 
+            messages=[{"role": "user", "content": prompt}]
+        )
+        report = clean_markdown(res.choices[0].message.content)
+        
+        print("\n" + "="*60)
+        print(" GIT-GUARD IMPACT REPORT")
+        print("-" * 60)
+        print(report)
+        print("="*60 + "\n")
+        
+        if "RISK LEVEL: High" in report:
+            print("[Warning] High Risk Detected! Please review carefully.")
+            
+    except Exception as e:
+        print(f"[Error] Analysis failed: {e}")
+        return
+
+    print("\n[?] Do you want to proceed with this commit? [Y/n]: ", end="", flush=True)
+    choice = get_console_input("").lower()
+
+    if choice == 'n':
+        print("\n[Abort] Commit aborted by user.")
+        with open(flag_path, 'w') as f:
+            f.write("aborted")
+        sys.exit(1)
+    else:
+        print("[Info] Proceeding to commit message generation...")
+
+# ==========================================
+# 5. 业务模式：交互建议模式 (Commit-Msg)
+# ==========================================
+def run_suggestion_mode(msg_file_path):
+    if os.path.exists(get_abort_flag_path()):
+        sys.exit(1)
+    
     try:
         with open(msg_file_path, 'r', encoding='utf-8') as f:
             original_msg = f.read().strip()
@@ -260,40 +307,44 @@ def run(msg_file_path):
     
     if not original_msg: return
 
-    print(f"🔄 [Git-Guard] Analyzing (Hybrid RAG + Rerank)...")
-    
     changes, context = process_changes_with_rag()
-    
     if not changes: return
 
     config = fetch_dynamic_rules()
     fmt = config.get("template_format", "Standard")
     rules = config.get("custom_rules", "")
 
-    # LLM Prompt
     prompt = f"""
-    Role: Code Reviewer & Commit Message Generator.
+    Role: Strict Commit Message Compliance Officer.
     
-    User Draft: "{original_msg}"
+    [INPUT DATA]
+    User Intent (Draft): "{original_msg}"
+    Code Changes (Diff): {str(list(changes.values()))[:3000]} 
+    Context: {context[:1500]}
     
-    Code Changes: 
-    {str(list(changes.values()))[:3000]}
+    [MANDATORY CONFIGURATION]
+    You MUST strictly follow these formatting rules:
+    1. Target Template: "{fmt}"
+    2. Custom Instructions: "{rules}"
     
-    Knowledge Context:
-    {context[:1500]}
+    [TASK]
+    Generate 3 distinct commit messages based on the "User Intent" and "Code Changes".
     
-    >>> RULES <<<
-    Template: "{fmt}"
-    Instructions: "{rules}"
-    >>> END RULES <<<
+    CRITICAL INSTRUCTIONS:
+    - Every option MUST strictly match the structure of "Target Template".
+    - If the Template is "[Scope] <Msg>", your output MUST look like "[Backend] fix bug".
+    - Do NOT simply copy the User Draft; rewrite it to fit the Template.
+    - Apply all "Custom Instructions" (e.g., lowercase, specific types).
     
-    STRICT OUTPUT FORMAT:
-    RISK: <High/Medium/Low>
+    [STRICT OUTPUT FORMAT]
+    RISK: <Level>
     SUMMARY: <Summary>
     OPTIONS: <Msg1>|||<Msg2>|||<Msg3>
     
-    Example:
-    OPTIONS: [Backend] fix login|||fix: auth bug|||refactor: login
+    [CONSTRAINTS]
+    - Plain text only. NO Markdown.
+    - NO numbered lists (1. 2.).
+    - Use '|||' as the ONLY separator for OPTIONS.
     """
 
     try:
@@ -304,12 +355,12 @@ def run(msg_file_path):
         )
         content = res.choices[0].message.content
         
-        # 解析逻辑
         risk = "Medium"
         summary = "Update"
         options = []
         
         for line in content.split('\n'):
+            line = clean_markdown(line)
             if line.startswith("RISK:"): risk = line.replace("RISK:", "").strip()
             if line.startswith("SUMMARY:"): summary = line.replace("SUMMARY:", "").strip()
             if "OPTIONS:" in line:
@@ -318,27 +369,24 @@ def run(msg_file_path):
 
         final_options = []
         for opt in options:
+            opt = clean_markdown(opt)
             opt = re.sub(r'^[\d\-\.\s]+', '', opt).replace("OPTIONS:", "").strip()
             if len(opt) > 3: final_options.append(opt)
         
         while len(final_options) < 3: final_options.append(f"refactor: {original_msg}")
         options = final_options[:3]
 
-    except Exception as e:
-        print(f"AI Failed: {e}")
-        return
+    except Exception: return
 
-    # 交互界面
     print("\n" + "="*60)
-    print(f"🤖 AI SUGGESTIONS (Risk: {risk})")
-    print("="*60)
+    print("-" * 60)
     print(f"[0] [Keep Original]: {original_msg}")
     print(f"[1] {options[0]}")
     print(f"[2] {options[1]}")
     print(f"[3] {options[2]}")
     print("="*60)
 
-    sel = get_console_input("\n👉 Select (0-3): ")
+    sel = get_console_input("\n[?] Select (0-3): ")
     
     final_msg = original_msg
     if sel == '1': final_msg = options[0]
@@ -348,10 +396,15 @@ def run(msg_file_path):
     if final_msg != original_msg:
         with open(msg_file_path, 'w', encoding='utf-8') as f:
             f.write(final_msg)
-        print("✅ Updated.")
+        print("[Success] Updated.")
 
     report_to_cloud(final_msg, risk, summary)
 
+# ==========================================
+# 6. 入口路由
+# ==========================================
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        run(sys.argv[1])
+        run_suggestion_mode(sys.argv[1])
+    else:
+        run_report_mode()
