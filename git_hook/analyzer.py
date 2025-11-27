@@ -30,21 +30,27 @@ class ZhipuEmbeddingFunction(chromadb.EmbeddingFunction):
         response = self.client.embeddings.create(model="embedding-3", input=input)
         return [data.embedding for data in response.data]
 
+import sys
+
 def get_console_input(prompt_text):
     """
-    强制从终端读取输入，绕过 Git Hook 的 stdin 限制
+    跨平台强制从终端读取输入，绕过 Git Hook 的 stdin 占用问题。
     """
+    # 打印提示符，flush=True 确保立即显示
     print(prompt_text, end='', flush=True)
+    
     try:
-        # Windows 使用 CON，Linux/Mac 使用 /dev/tty
         if sys.platform == 'win32':
+            # ✅ Windows 核心逻辑：打开 CON 设备读取键盘输入
             with open('CON', 'r') as f:
                 return f.readline().strip()
         else:
+            # ✅ Mac/Linux 逻辑：打开 /dev/tty
             with open('/dev/tty', 'r') as f:
                 return f.readline().strip()
-    except Exception:
-        # 如果失败，回退到标准 input (可能在某些终端会卡住)
+    except Exception as e:
+        # 如果以上都失败（比如在某些 CI/CD 环境或 GUI 工具中），回退到标准输入
+        # 但在 Git GUI 客户端中，这通常也无法交互，只能静默失败
         return input().strip()
 
 def get_diff_and_context():
