@@ -3,7 +3,7 @@ import os
 import requests
 import stat
 
-SERVER_URL = "http://localhost:8000"
+SERVER_URL = "http://47.245.121.54:8000"
 
 # --- Hook 1: Commit-Msg (建议模式) ---
 HOOK_COMMIT_MSG = """#!/bin/sh
