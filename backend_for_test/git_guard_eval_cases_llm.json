@@ -1,0 +1,82 @@
+[
+  {
+    "user_input": "Generate a commit message for the following changes:\ndiff --git a/server/main.py b/server/main.py\nindex 8b13789..29a5c8e 100644\n--- a/server/main.py\n+++ b/server/main.py\n@@ -10,4 +10,4 @@\n- app = FastAPI()\n+ app = FastAPI(title=\"Git-Guard Server\")\n",
+    "response": "Update the FastAPI application so that it uses a more descriptive title for the server instance, making it slightly clearer when the process name appears in logs or dashboards, but without mentioning any specific backend tag or refactor convention.",
+    "retrieved_contexts": [
+      "The model generated this commit message only from the visible code change that replaces the plain FastAPI constructor with one that sets a title string. It does not rely on any explicit project template or domain/type prefix, so it simply describes that the app title is updated in a generic way without referring to backend modules or refactoring rules."
+    ],
+    "reference": "[Backend][Refactor] Update server title in main application"
+  },
+  {
+    "user_input": "Generate a commit message for the following changes:\ndiff --git a/backend/auth/login_service.py b/backend/auth/login_service.py\nindex 3ac3b21..9f0d2c4 100644\n--- a/backend/auth/login_service.py\n+++ b/backend/auth/login_service.py\n@@ -20,7 +20,13 @@ class LoginService:\n-    resp = httpx.post(url, json=payload, timeout=1)\n+    resp = httpx.post(url, json=payload, timeout=5)\n+    if resp.elapsed.total_seconds() > 3:\n+        logger.warning(\"slow login response for user %s\", user_id)\n@@ -40,6 +46,9 @@ class LoginService:\n-        raise AuthenticationError(\"login failed\")\n+        logger.error(\"login failed for user %s: %s\", user_id, resp.status_code)\n+        raise AuthenticationError(\"login failed\")\n",
+    "response": "Increase the timeout used by the login request and add some extra logging around slow responses and failed authentication attempts so that login issues are easier to notice, although the message does not clearly explain the overall impact or follow the structured backend fix naming pattern.",
+    "retrieved_contexts": [
+      "From the code diff it is apparent that the login service now waits longer before timing out, and it logs warnings for slow calls and errors when authentication fails. However, the model was not provided with any authentication-specific risk policies or commit template rules, so it produces a loose description that focuses on the obvious timeout change and logging, without classifying the change as a higher-risk auth path modification or using the precise project tags."
+    ],
+    "reference": "[Backend][Fix] Extend login timeout and log slow or failed authentication attempts"
+  },
+  {
+    "user_input": "Generate a commit message for the following changes:\ndiff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\nindex 71a0a10..42c1bdf 100644\n--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -15,6 +15,22 @@ jobs:\n       - uses: actions/checkout@v4\n       - uses: actions/setup-python@v4\n         with:\n           python-version: '3.11'\n+      - name: Install backend deps\n+        run: pip install -r requirements.txt\n+      - name: Run backend tests\n+        run: pytest\n+      - name: Setup Node\n+        uses: actions/setup-node@v4\n+        with:\n+          node-version: '20'\n+      - name: Install frontend deps\n+        run: |\n+          cd web\n+          npm ci\n+      - name: Build frontend\n+        run: |\n+          cd web\n+          npm run build\n",
+    "response": "Adjust the CI workflow so that it installs the backend dependencies, runs the Python test suite, prepares the Node environment for the web folder and triggers a basic frontend build, providing a general pipeline enhancement but not explicitly stating which checks are new or how they fit into any CI feature tagging scheme.",
+    "retrieved_contexts": [
+      "The commit message is based solely on the added CI steps that install dependencies, run pytest for the backend and build the frontend. Since no detailed CI naming rules or categories were given to the model, it treats this as a broad workflow update and does not distinguish between new feature-like checks and routine pipeline maintenance, resulting in a vague description that could apply to many different CI changes."
+    ],
+    "reference": "[CI][Feat] Add backend test and frontend build stages to CI workflow"
+  },
+  {
+    "user_input": "Generate a commit message for the following changes:\ndiff --git a/backend_for_test/api/client.py b/backend_for_test/api/client.py\nindex 1b51e44..d9ac03f 100644\n--- a/backend_for_test/api/client.py\n+++ b/backend_for_test/api/client.py\n@@ -5,7 +5,20 @@ class ApiClient:\n-    resp = requests.get(url, timeout=2)\n-    return resp.json()\n+    try:\n+        resp = requests.get(url, timeout=5)\n+        resp.raise_for_status()\n+    except requests.Timeout:\n+        logger.error(\"external API timeout for %s\", url)\n+        raise ExternalApiError(\"upstream timeout\")\n+    except requests.HTTPError as exc:\n+        logger.error(\"external API error for %s: %s\", url, exc.response.status_code)\n+        raise ExternalApiError(\"upstream http error\")\n+    return resp.json()\n",
+    "response": "Update the external API client so that it uses a longer timeout and wraps HTTP errors and timeouts in a custom exception after logging them, making failures somewhat easier to trace but without clearly documenting the reliability impact or following any consistent backend fix message structure.",
+    "retrieved_contexts": [
+      "Looking only at the diff, the model can see that timeout handling and error logging have been added around the requests call. However, there is no extra guidance describing how robustness changes should be labeled, and no explicit mention of the system’s reliability policies, so the generated message speaks in a generic way about updating the API client without emphasising the concrete benefits around observability and error propagation."
+    ],
+    "reference": "[Backend][Fix] Improve robustness of external API client with logging and error propagation"
+  },
+  {
+    "user_input": "Generate a commit message for the following changes:\ndiff --git a/docs/git_guard_usage.md b/docs/git_guard_usage.md\nnew file mode 100644\nindex 0000000..e1b3a21 100644\n--- /dev/null\n+++ b/docs/git_guard_usage.md\n@@ -0,0 +1,32 @@\n+# Git-Guard Usage\n+\n+Git-Guard runs as a pre-commit hook and analyzes staged changes.\n+It produces an impact report with risk level, impact analysis,\n+and commit message suggestions.\n+\n+Basic workflow:\n+1. Stage your changes with git add.\n+2. Run git commit as usual.\n+3. Review the Git-Guard impact report and choose a suggested commit.\n+\n+The tool can be configured via server/server_config.json.\n",
+    "response": "Add a new documentation page that briefly explains how Git-Guard runs as a pre-commit hook, outlines the basic workflow for staging changes and committing, and mentions that the tool produces impact reports, but the message does not clearly identify this as a docs addition or reference any project-specific docs tag.",
+    "retrieved_contexts": [
+      "The only information the model relies on here is that a new Markdown file under the docs directory is created and that it contains usage notes for Git-Guard. Without any documentation commit guidelines or examples of preferred tags, the output stays at the level of 'add usage documentation' and does not differentiate between adding new files, updating existing content, or describing which audiences the document targets."
+    ],
+    "reference": "[Docs][Add] Add documentation for Git-Guard workflow and impact reports"
+  },
+  {
+    "user_input": "Generate a commit message for the following changes:\ndiff --git a/backend_for_test/tests/test_risk_analysis.py b/backend_for_test/tests/test_risk_analysis.py\nindex 0000000..d9ac03f 100644\n--- a/backend_for_test/tests/test_risk_analysis.py\n+++ b/backend_for_test/tests/test_risk_analysis.py\n@@ -0,0 +1,40 @@\n+def test_low_risk_config_change(risk_engine, low_risk_diff):\n+    result = risk_engine.analyze(low_risk_diff)\n+    assert result.level == \"Low\"\n+\n+\n+def test_medium_risk_auth_change(risk_engine, auth_diff):\n+    result = risk_engine.analyze(auth_diff)\n+    assert result.level == \"Medium\"\n+\n+\n+def test_high_risk_db_schema_change(risk_engine, schema_diff):\n+    result = risk_engine.analyze(schema_diff)\n+    assert result.level == \"High\"\n",
+    "response": "Introduce a set of unit tests that call the risk engine with different kinds of diffs and check that the returned risk level is low, medium or high as expected, but keep the description generic and avoid mentioning exactly which components or scenarios are being validated.",
+    "retrieved_contexts": [
+      "Since the added file is clearly a test module and the functions verify that the risk engine assigns low, medium and high levels, the model can infer that this is about testing the classification logic. However, no testing guidelines, naming conventions or examples of test-related commits are provided, so the generated message simply says that tests for risk levels are added, without clarifying the relationship to specific configuration, authentication or schema changes."
+    ],
+    "reference": "[Test][Add] Add unit tests for low, medium and high risk classifications in risk engine"
+  },
+  {
+    "user_input": "Generate a commit message for the following changes:\ndiff --git a/backend_for_test/ragas_new/utils/template_builder.py b/backend_for_test/ragas_new/utils/template_builder.py\nindex 4b2ed91..8f4e6d0 100644\n--- a/backend_for_test/ragas_new/utils/template_builder.py\n+++ b/backend_for_test/ragas_new/utils/template_builder.py\n@@ -1,20 +1,34 @@\n-def build_commit_prompt(diff, rules):\n-    return f\"Generate a commit message for the following diff: {diff} using rules: {rules}\"\n+def build_commit_prompt(diff, rules, risk_template=None):\n+    base = [\n+        \"You are Git-Guard's commit assistant.\",\n+        \"Generate a concise, rule-compliant commit message.\",\n+        \"Follow the given commit template and custom rules.\",\n+    ]\n+    if risk_template:\n+        base.append(\"Use the risk guidelines when the diff touches sensitive components.\")\n+    base.append(f\"DIFF:\\n{diff}\")\n+    base.append(f\"RULES:\\n{rules}\")\n+    return \"\\n\\n\".join(base)\n",
+    "response": "Refactor the helper function that builds commit prompts so that it can optionally take a risk template and constructs a slightly more structured prompt, but the commit message itself does not highlight that the change is purely a backend refactor or that behaviour is intended to remain the same.",
+    "retrieved_contexts": [
+      "The diff shows that the function responsible for building commit prompts is extended to support extra context and an optional risk template. Without any explicit refactoring policy or commit tagging scheme, the model frames this as a small internal improvement and does not stress that the behavioural semantics of the application are unchanged, nor does it use a standardised refactor tag like the one defined in the project rules."
+    ],
+    "reference": "[Backend][Refactor] Refactor commit prompt builder to support shared rules and risk templates"
+  },
+  {
+    "user_input": "Generate a commit message for the following changes:\ndiff --git a/backend/logging/config.py b/backend/logging/config.py\nindex 5c9a12f..bc0e5b1 100644\n--- a/backend/logging/config.py\n+++ b/backend/logging/config.py\n@@ -8,7 +8,9 @@ def setup_logging():\n-    fmt = '%(levelname)s %(name)s %(message)s'\n+    fmt = '%(asctime)s %(levelname)s %(name)s request_id=%(request_id)s user_id=%(user_id)s %(message)s'\n     logging.basicConfig(level=logging.INFO, format=fmt)\n",
+    "response": "Change the logging configuration so that log lines now include a timestamp together with request and user identifiers before the message, improving traceability a bit but not explicitly signaling that this is a routine maintenance change on backend logging.",
+    "retrieved_contexts": [
+      "Only the logging format string is modified in this diff, adding placeholders for request_id and user_id as well as the timestamp. The model therefore talks about updating the logging format in general terms. Because there is no information about how maintenance commits should be labeled or whether they fall under a chore category, the message remains a straightforward description and omits any explicit indication that this is a low-risk, non-functional change."
+    ],
+    "reference": "[Backend][Chore] Unify backend log format and include request and user identifiers"
+  },
+  {
+    "user_input": "Generate a commit message for the following changes:\ndiff --git a/backend_for_test/ragas_new/old_experiments.py b/backend_for_test/ragas_new/old_experiments.py\ndeleted file mode 100644\nindex 1234567..0000000 100644\n--- a/backend_for_test/ragas_new/old_experiments.py\n+++ /dev/null\n@@ -1,40 +0,0 @@\n-# legacy experimental code for RAG pipeline\n-# not used by current implementation\n-\n-dummy = True\n\ndiff --git a/backend_for_test/ragas_new/__init__.py b/backend_for_test/ragas_new/__init__.py\nindex 8a09a23..9b1bc7f 100644\n--- a/backend_for_test/ragas_new/__init__.py\n+++ b/backend_for_test/ragas_new/__init__.py\n@@ -1,3 +1,5 @@\n-from .old_experiments import *\n+\"\"\"Entry points for current RAG evaluation utilities.\"\"\"\n+\n+from .git_guard_ragas_eval_from_json import *\n",
+    "response": "Remove the old experimental module related to an earlier RAG pipeline and adjust the package initialisation to point to the current evaluation utilities instead, but keep the wording fairly generic and avoid clearly stating that this is a cleanup of obsolete code paths.",
+    "retrieved_contexts": [
+      "The code diff reveals that a legacy module is deleted and the package __init__ is updated to expose a newer entry point. Without any dedicated cleanup policy or examples of how to describe such removals, the model focuses on saying that old RAG code is removed and the init file is updated, without emphasising that the removed code was unused or that this change is meant to simplify the codebase."
+    ],
+    "reference": "[Cleanup] Remove legacy RAG experiment module and update package entry points"
+  },
+  {
+    "user_input": "Generate a commit message for the following changes:\ndiff --git a/backend_for_test/api/summary_endpoint.py b/backend_for_test/api/summary_endpoint.py\nindex 7fd9b31..a2c0e11 100644\n--- a/backend_for_test/api/summary_endpoint.py\n+++ b/backend_for_test/api/summary_endpoint.py\n@@ -1,6 +1,24 @@\n-@app.post(\"/summary\")\n-def upload_summary(request: Request):\n-    data = request.json()\n-    store(data)\n-    return {\"ok\": True}\n+@app.post(\"/summary\")\n+async def upload_summary(request: Request):\n+    payload = await request.json()\n+    if \"project\" not in payload or \"report\" not in payload:\n+        raise HTTPException(status_code=400, detail=\"missing project or report\")\n+    if len(payload[\"report\"]) > 20000:\n+        raise HTTPException(status_code=413, detail=\"report too large\")\n+    store_summary(payload[\"project\"], payload[\"report\"])\n+    return {\"ok\": True}\n",
+    "response": "Update the summary endpoint so that it now expects a JSON payload with project and report fields, performs basic size and field checks before storing the data, and returns the same success response, but the commit message does not clearly present this as a new backend feature or mention that it is intended for Git-Guard reports.",
+    "retrieved_contexts": [
+      "By inspecting the diff, the model can see that the summary upload path is turned into an async handler that validates required fields and enforces a simple length limit on the report body. Since it is not given any high-level API design notes or naming conventions for backend features, it ends up describing the shape of the new behaviour in broad terms, without labeling it as a new capability or explaining its relation to Git-Guard evaluation summaries."
+    ],
+    "reference": "[Backend][Feat] Add project-scoped summary upload endpoint with basic validation"
+  }
+]
