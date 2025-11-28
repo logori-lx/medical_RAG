@@ -6,7 +6,7 @@ import requests
 import chromadb
 from typing import List, Dict, Any
 from git import Repo
-from zhipuai import ZhipuAI
+from zai import ZhipuAiClient
 import getpass
 
 # ==========================================
@@ -90,7 +90,7 @@ class Reranker:
 class ZhipuEmbeddingFunction(chromadb.EmbeddingFunction):
     def __init__(self):
         self.api_key = API_KEY
-        self.client = ZhipuAI(api_key=self.api_key)
+        self.client = ZhipuAiClient(api_key=self.api_key)
     
     def __call__(self, input: List[str]) -> List[List[float]]:
         if not self.api_key: return [[]] * len(input)
@@ -322,24 +322,38 @@ def run_suggestion_mode(msg_file_path):
     rules = config.get("custom_rules", "")
 
     prompt = f"""
-    Role: Commit Message Generator.
-    User Draft: "{original_msg}"
-    Code Changes: {str(list(changes.values()))[:3000]} 
+    Role: Strict Commit Message Compliance Officer.
+    
+    [INPUT DATA]
+    User Intent (Draft): "{original_msg}"
+    Code Changes (Diff): {str(list(changes.values()))[:3000]} 
     Context: {context[:1500]}
     
-    >>> RULES <<<
-    Template: "{fmt}"
-    Instructions: "{rules}"
-    >>> END RULES <<<
+    [MANDATORY CONFIGURATION]
+    You MUST strictly follow these formatting rules:
+    1. Target Template: "{fmt}"
+    2. Custom Instructions: "{rules}"
     
-    STRICT FORMAT:
+    [TASK]
+    Generate 3 distinct commit messages based on the "User Intent" and "Code Changes".
+    
+    CRITICAL INSTRUCTIONS:
+    - Every option MUST strictly match the structure of "Target Template".
+    - If the Template is "[Scope] <Msg>", your output MUST look like "[Backend] fix bug".
+    - Do NOT simply copy the User Draft; rewrite it to fit the Template.
+    - Apply all "Custom Instructions" (e.g., lowercase, specific types).
+    
+    [STRICT OUTPUT FORMAT]
     RISK: <Level>
     SUMMARY: <Summary>
     OPTIONS: <Msg1>|||<Msg2>|||<Msg3>
     
-    Constraints: Plain text only. No Markdown. No numbered lists.
+    [CONSTRAINTS]
+    - Plain text only. NO Markdown.
+    - NO numbered lists (1. 2.).
+    - Use '|||' as the ONLY separator for OPTIONS.
     """
-
+    
     try:
         client = ZhipuAI(api_key=API_KEY)
         res = client.chat.completions.create(
@@ -372,7 +386,7 @@ def run_suggestion_mode(msg_file_path):
     except Exception: return
 
     print("\n" + "="*60)
-    print(f" COMMIT SUGGESTIONS (Risk: {risk})")
+    print(f" COMMIT SUGGESTIONS:")
     print("-" * 60)
     print(f"[0] [Keep Original]: {original_msg}")
     print(f"[1] {options[0]}")
