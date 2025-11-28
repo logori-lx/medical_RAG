@@ -33,46 +33,59 @@
 
 Git-Guard 采用 **Client-Server (C/S)** 分离架构，兼顾了本地执行的低延迟与云端管理的统一性。
 
-graph TD
-    User[Developer] -->|git commit| Hook1[Pre-Commit Hook]
-    User -->|git push| Hook2[Pre-Push Hook]
+## 🏗️ Architecture
 
-    %% 修复点：给标签内容加上双引号 "..." 以支持括号和特殊字符
-    GenAI["☁️ External GenAI Service<br/>(ZhipuAI / LLM API)"]
-    style GenAI fill:#ff9900,stroke:#333,stroke-width:2px,color:white
+```mermaid
+usecaseDiagram
+    actor "Developer" as Dev
+    actor "Team Leader" as Lead
+    actor "GenAI Service" as AI
+    actor "Git System" as Git
 
-    subgraph Client [💻 Local Environment]
-        direction TB
-        Hook1 --> Analyzer[Analyzer Script]
-        Hook2 --> Indexer[Indexer Script]
-        
-        LocalDB[(Local ChromaDB)]
-        
-        %% 本地数据流
-        Analyzer <-->|Retrieve Context| LocalDB
-        Indexer -->|Update Index| LocalDB
-        
-        %% 唯一的 AI 交互
-        Analyzer <-->|Generate Suggestion| GenAI
-    end
+    package "Git-Guard Client (Local)" {
+        usecase "Install CLI Tool" as UC1
+        usecase "Generate Commit Suggestion" as UC2
+        usecase "Assess Code Risk" as UC3
+        usecase "Select/Edit Message" as UC4
+        usecase "Update Vector Index" as UC5
+    }
+
+    package "Git-Guard Server (Cloud)" {
+        usecase "Configure Rules & Templates" as UC6
+        usecase "View Commit Logs" as UC7
+        usecase "Monitor CI Status" as UC8
+        usecase "Run Automated Tests (CI)" as UC9
+    }
+
+    %% Relationships
+    Dev --> UC1
     
-    subgraph Server [🚀 Cloud Platform]
-        direction TB
-        API[FastAPI Server]
-        Dashboard[Vue3 Frontend]
-        Scheduler[APScheduler CI]
-        LogDB[(Commit Logs)]
-        CI_Env[CI Sandbox]
-        
-        %% 服务端逻辑
-        API <--> LogDB
-        Scheduler -->|Run Tests| CI_Env
-    end
-    
-    %% Client-Server 通信
-    Analyzer -->|Fetch Rules| API
-    Analyzer -->|Report Logs| API
+    %% Commit Workflow
+    Dev --> UC2
+    Dev --> UC3
+    Dev --> UC4
+    UC2 .> AI : <<include>> \n(Rerank & Generate)
+    UC3 .> AI : <<include>> \n(Risk Analysis)
+    Git --> UC2 : Triggers (pre-commit)
 
+    %% Push Workflow
+    Git --> UC5 : Triggers (pre-push)
+    UC5 .> AI : <<include>> \n(Embedding)
+    
+    %% Management Workflow
+    Lead --> UC6
+    Lead --> UC7
+    
+    %% CI/CD Workflow
+    Dev --> UC8
+    Lead --> UC8
+    UC9 --> UC8 : Updates Status
+    UC5 ..> UC9 : Triggers (via Server)
+
+    %% System Dependencies
+    UC2 ..> UC6 : <<uses>> \n(Fetch Config)
+    UC4 ..> UC7 : <<uses>> \n(Upload Log)
+```
 -----
 
 ## Quick Start
