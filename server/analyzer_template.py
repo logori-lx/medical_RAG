@@ -269,7 +269,7 @@ def run_report_mode():
     """
     
     try:
-        client = ZhipuAI(api_key=API_KEY)
+        client = ZhipuAiClient(api_key=API_KEY)
         res = client.chat.completions.create(
             model="glm-4-flash", 
             messages=[{"role": "user", "content": prompt}]
@@ -355,7 +355,7 @@ def run_suggestion_mode(msg_file_path):
     """
     
     try:
-        client = ZhipuAI(api_key=API_KEY)
+        client = ZhipuAiClient(api_key=API_KEY)
         res = client.chat.completions.create(
             model="glm-4-flash", 
             messages=[{"role": "user", "content": prompt}]
